@@ -11,6 +11,7 @@ export const onCreateTask = /* GraphQL */ `
       stage
       createdAt
       updatedAt
+      owner
     }
   }
 `;
@@ -24,6 +25,7 @@ export const onUpdateTask = /* GraphQL */ `
       stage
       createdAt
       updatedAt
+      owner
     }
   }
 `;
@@ -37,6 +39,7 @@ export const onDeleteTask = /* GraphQL */ `
       stage
       createdAt
       updatedAt
+      owner
     }
   }
 `;

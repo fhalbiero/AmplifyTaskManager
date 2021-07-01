@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { API } from 'aws-amplify';
+import { API, Auth } from 'aws-amplify';
 import { Task } from '../Task';
 import { listTasks } from '../../graphql/queries';
 import { deleteTask, updateTask } from '../../graphql/mutations';
-//import produce from 'immer';
 
 import TasksContext from './context';
 
@@ -20,7 +19,7 @@ export function Tasks() {
     const [ currentTask, setCurrentTask ] = useState(null);
 
     const [ showOverlay, setShowOverlay ] = useState(false);
-    const [ tasks, updateTasks ] = useState([]);
+    const [ tasks, setTasks ] = useState([]);
 
 
     useEffect(() => {
@@ -30,16 +29,26 @@ export function Tasks() {
 
     async function fetchTasks() {
         try {
-           const tasksData = await API.graphql({ query: listTasks });
-           manageTasks(tasksData.data.listTasks.items);      
+            const tasksData = await API.graphql({ 
+                    authMode: 'AMAZON_COGNITO_USER_POOLS',   
+                    query: listTasks 
+                });
+            await setTaskState(tasksData.data.listTasks.items);      
         } catch (error) {
-            console.log({ error })
+            console.log({ error });
         }
     }
 
 
+    async function setTaskState(tasksArray) {
+        const user = await Auth.currentAuthenticatedUser();
+        const ownerTasks = tasksArray.filter( task => task.owner === user.username)
+        manageTasks(ownerTasks);
+    }
+
+
     function manageTasks(tasksData) {
-        updateTasks(tasksData);
+        setTasks(tasksData);
 
         const tasksDataStage1 = [];
         const tasksDataStage2 = [];
@@ -61,23 +70,23 @@ export function Tasks() {
     }
 
 
-    function setTaskState(tasksArray) {
-        manageTasks(tasksArray);
-    }
-
-
     async function removeTask(id) {
         await API.graphql({
-            query: deleteTask, variables: { input: { id } }
+            authMode: 'AMAZON_COGNITO_USER_POOLS',
+            query: deleteTask, 
+            variables: { input: { id } }
         });
 
-        const filteredTasks = tasks.filter( task => task.id !== id);
-        manageTasks(filteredTasks);
+        /* const filteredTasks = tasks.filter( task => task.id !== id);
+        manageTasks(filteredTasks); */
+        await fetchTasks();
     }
 
     async function handleTaskUpdate({ id, title, description, priority, stage }) {
         await API.graphql({
-            query: updateTask, variables: { input: { id, title, description, priority, stage } }
+            authMode: 'AMAZON_COGNITO_USER_POOLS',
+            query: updateTask, 
+            variables: { input: { id, title, description, priority, stage } }
         });
 
         await fetchTasks();
@@ -119,19 +128,19 @@ export function Tasks() {
     }
 
 
-    /* function move(fromList, toList, from, to) {
-        updateTasks(produce(tasks, draft => {
-            console.log(fromList, toList, from, to, tasks)
-          const dragged = draft[fromList].cards[from];
-    
-          draft[fromList].cards.splice(from, 1);
-          draft[toList].cards.splice(to, 0, dragged);
-        }))
-    } */
-
 
     return (
-        <TasksContext.Provider value={{ tasks, updateTaskStage, removeTask, editTask }}>
+        <TasksContext.Provider value={{ 
+            tasks, 
+            updateTaskStage, 
+            removeTask, 
+            editTask,
+            isUpdating,
+            currentTask,
+            stage,
+            updateOverlayVisibility, 
+            fetchTasks 
+        }}>
             <Container>
                 <div className="stage">
                     <div className="stage-top">
@@ -149,11 +158,7 @@ export function Tasks() {
                             <Task 
                                 key={task.id} 
                                 index={index}
-                                listIndex={1}
                                 data={task} 
-                                removeTask={removeTask}
-                                updateTask={handleTaskUpdate}
-                                editTask={editTask}
                             />
                         ))
                     } 
@@ -169,12 +174,8 @@ export function Tasks() {
                         tasksStage2.map( (task, index) => (
                             <Task 
                                 key={task.id} 
-                                index={index}
-                                listIndex={2}
+                                index={index}                     
                                 data={task} 
-                                removeTask={removeTask}
-                                updateTask={handleTaskUpdate}
-                                editTask={editTask}
                             />
                         ))
                     } 
@@ -191,11 +192,7 @@ export function Tasks() {
                             <Task 
                                 key={task.id} 
                                 index={index}
-                                listIndex={3}
                                 data={task} 
-                                removeTask={removeTask}
-                                updateTask={handleTaskUpdate}
-                                editTask={editTask}
                             />
                         ))
                     } 
@@ -203,14 +200,7 @@ export function Tasks() {
                 </div>
             </Container>
             { showOverlay && (
-                <CreateTask
-                    updateOverlayVisibility={updateOverlayVisibility}
-                    updateTasks={setTaskState}
-                    tasks={tasks}
-                    stage={stage}
-                    isUpdating={isUpdating}
-                    currentTask={currentTask}
-                />
+                <CreateTask  />
             )}
         </TasksContext.Provider>
     )

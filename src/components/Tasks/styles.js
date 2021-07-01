@@ -30,6 +30,12 @@ export const Container = styled.div`
                 border-radius: 4px;
                 background-color: #006eff;
                 color: #fff;
+                transition: filter .2s;
+                cursor: pointer;
+
+                &:hover {
+                    filter: brightness(1.2);
+                }
             } 
         }
         

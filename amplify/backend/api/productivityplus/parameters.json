@@ -1,5 +1,11 @@
 {
   "AppSyncApiName": "productivityplus",
   "DynamoDBBillingMode": "PAY_PER_REQUEST",
-  "DynamoDBEnableServerSideEncryption": false
+  "DynamoDBEnableServerSideEncryption": false,
+  "AuthCognitoUserPoolId": {
+    "Fn::GetAtt": [
+      "authproductivityplus80fdda44",
+      "Outputs.UserPoolId"
+    ]
+  }
 }

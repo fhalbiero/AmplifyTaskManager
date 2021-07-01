@@ -11,6 +11,7 @@ export const getTask = /* GraphQL */ `
       stage
       createdAt
       updatedAt
+      owner
     }
   }
 `;
@@ -29,6 +30,7 @@ export const listTasks = /* GraphQL */ `
         stage
         createdAt
         updatedAt
+        owner
       }
       nextToken
     }

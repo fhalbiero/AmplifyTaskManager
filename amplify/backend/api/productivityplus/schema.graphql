@@ -1,4 +1,9 @@
-type Task @model {
+type Task @model 
+  @auth(rules: [
+    { allow: owner }
+    { allow: private, operations: [read] }
+    { allow: public, operations: [read] }
+  ]) {
   id: ID!
   title: String!
   description: String

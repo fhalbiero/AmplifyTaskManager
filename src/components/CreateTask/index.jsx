@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { v4 as uuid } from 'uuid';
-import { API, Auth } from 'aws-amplify';
+import { API } from 'aws-amplify';
 import { createTask, updateTask } from '../../graphql/mutations';
+import TasksContext from '../Tasks/context';
 
 import { Container } from './styles';
 
@@ -9,18 +10,20 @@ const initialState = {
     title: '',
     description: '',
     priority: 'LOW',
-    stage: '3',
+    stage: '1',
 };
 
 
-export function CreateTask({ 
-    updateOverlayVisibility, 
-    updateTasks, 
-    stage, 
-    tasks, 
-    isUpdating, 
-    currentTask 
-}) {
+export function CreateTask() {
+
+    const { 
+        tasks,  
+        isUpdating, 
+        currentTask, 
+        updateOverlayVisibility, 
+        fetchTasks 
+    } = useContext(TasksContext); 
+
     const [ formState, updateFormState ] = useState(initialState);
 
     useEffect(() => {
@@ -38,7 +41,8 @@ export function CreateTask({
 
     async function save() {
         try {
-            const { title, description, priority } = formState;
+            const { title, description, priority, stage } = formState;
+
             if (!title || !priority || !stage) return;
 
             updateFormState(currentState => ({ ...currentState, saving: true }));
@@ -47,20 +51,24 @@ export function CreateTask({
         
             if (isUpdating) {
                 await API.graphql({
-                    query: updateTask, variables: { input: { ...taskInfo, id: formState.id } }
+                    authMode: 'AMAZON_COGNITO_USER_POOLS',
+                    query: updateTask, 
+                    variables: { input: { ...taskInfo, id: formState.id } }
                 });
 
                 const filteredTasks = tasks.filter( task => task.id !== currentTask.id);
-                updateTasks([...filteredTasks, { ...taskInfo, id: formState.id }]);
+                await fetchTasks();
             } else {
                 await API.graphql({
-                    query: createTask, variables: { input: taskInfo }
+                    authMode: 'AMAZON_COGNITO_USER_POOLS',
+                    query: createTask, 
+                    variables: { input: taskInfo }
                 });
-                updateTasks([...tasks, { ...taskInfo }]);
+                await fetchTasks();
             }
             
             
-            updateFormState(currentState => ({ ...currentState, saving: false }));
+            //updateFormState(currentState => ({ ...currentState, saving: false }));
             updateOverlayVisibility(false);
 
         } catch (err) {
